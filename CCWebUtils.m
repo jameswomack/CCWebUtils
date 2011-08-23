@@ -86,6 +86,46 @@
 	return returnData2;
 }
 
++ (NSData *)postImage:(UIImage *)theImage toUrl:(NSString *)urlString params:(NSDictionary *)params; {	
+    NSMutableURLRequest *request = [[[NSMutableURLRequest alloc] init] autorelease];
+    
+    NSString *boundary = [NSString stringWithString:@"---------------------------14737809831466499882746641449"];  
+    NSString *contentType = [NSString stringWithFormat:@"multipart/form-data; boundary=%@",boundary];  
+    [request addValue:contentType forHTTPHeaderField: @"Content-Type"];  
+
+    NSMutableData *body = [NSMutableData data]; 
+    
+	// Convert the params into form data
+	if (params) {
+		for(id key in params) { 
+            [body appendData:[[NSString stringWithFormat:@"Content-Disposition: form-data; name=\"%@\"\r\n\r\n%@",key,[params objectForKey:key]] dataUsingEncoding:NSUTF8StringEncoding]];  
+            [body appendData:[[NSString stringWithFormat:@"\r\n--%@\r\n",boundary] dataUsingEncoding:NSUTF8StringEncoding]];
+		}
+	}
+    
+    // Add the image to the form data
+    [body appendData:[@"Content-Disposition: form-data; name=\"image\"; filename=\"image.jpg\"\r\n" dataUsingEncoding:NSUTF8StringEncoding]];  
+    [body appendData:[[NSString stringWithString:@"Content-Type: application/octet-stream\r\n\r\n"] dataUsingEncoding:NSUTF8StringEncoding]];  
+    [body appendData:UIImageJPEGRepresentation(theImage,1.0)];  
+    [body appendData:[[NSString stringWithFormat:@"\r\n--%@--\r\n",boundary] dataUsingEncoding:NSUTF8StringEncoding]]; 
+	
+	ILogPlus(@"url:%@ post: %@",urlString,body);
+			
+	
+	[request setURL:[NSURL URLWithString:urlString]];
+	//[request setValue:postLength forHTTPHeaderField:@"Content-Length"];
+    [request setHTTPBody:body];
+	
+	NSError *error = nil;
+	
+	NSData *returnData2 = [NSURLConnection sendSynchronousRequest: request returningResponse: nil error: &error ];
+	if (error) {
+		ILogPlus(@"Error: %@",error);
+	}
+	
+	return returnData2;
+}
+
 // Put a query string onto the end of a url
 + (NSString*)postToUrl:(NSString *)urlString params:(NSDictionary *)params {
 	NSData *returnData2 = [self ut8postToUrl:urlString params:params];

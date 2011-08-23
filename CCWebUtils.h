@@ -15,6 +15,7 @@
 + (NSString*)addQueryStringToUrl:(NSString *)url params:(NSDictionary *)params;
 + (NSString*)postToUrl:(NSString *)urlString params:(NSDictionary *)params;
 + (NSData *)ut8postToUrl:(NSString *)urlString params:(NSDictionary *)params;
++ (NSData *)postImage:(UIImage *)theImage toUrl:(NSString *)urlString params:(NSDictionary *)params;
 + (BOOL)validateEmail:(NSString *)candidate;
 
 
