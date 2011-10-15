@@ -13,10 +13,12 @@
 
 + (NSString*)urlEscape:(NSString *)unencodedString;
 + (NSString*)addQueryStringToUrl:(NSString *)url params:(NSDictionary *)params;
-+ (NSString*)postToUrl:(NSString *)urlString params:(NSDictionary *)params;
-+ (NSData *)ut8postToUrl:(NSString *)urlString params:(NSDictionary *)params;
++ (NSString*)postToUrl:(id)url params:(NSDictionary *)params;
++ (NSString*)getFromUrl:(id)url;
++ (NSString*)stringWithContentsOfURL:(id)url method:(NSString *)HTTPMethod;
++ (NSData *)ut8postToUrl:(id)url params:(NSDictionary *)params;
 + (NSData *)postImage:(UIImage *)theImage toUrl:(NSString *)urlString params:(NSDictionary *)params;
 + (BOOL)validateEmail:(NSString *)candidate;
-
++ (void)handleError:(NSError *)error;
 
 @end

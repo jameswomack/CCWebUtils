@@ -51,7 +51,37 @@
 }
 
 
-+ (NSData *)ut8postToUrl:(NSString *)urlString params:(NSDictionary *)params; {	
++ (NSString*)getFromUrl:(id)url; {
+    NSMutableURLRequest *request = [[[NSMutableURLRequest alloc] init] autorelease];
+    if ([url isKindOfClass:[NSURL class]]) {
+        [request setURL:url];
+    }else {
+        [request setURL:[NSURL URLWithString:url]];
+    }	
+	[request setHTTPMethod:@"GET"];
+    [request setTimeoutInterval:30.0f];
+    
+	NSError *error = nil;
+	NSData *returnData2 = [NSURLConnection sendSynchronousRequest: request returningResponse: nil error: &error];
+    
+	if (error) {
+		ILogPlus(@"Error: %@",error);
+        [self performSelectorOnMainThread:@selector(handleError:) withObject:error waitUntilDone:NO];
+	}
+	
+	NSString *s = [[NSString alloc] initWithBytes:[returnData2 bytes] length:[returnData2 length] encoding:NSUTF8StringEncoding];	
+	
+	ILogPlus(@"%@, %@",s,returnData2);
+    
+	return [s autorelease];
+}
+
++ (NSString*)stringWithContentsOfURL:(id)url method:(NSString *)HTTPMethod; {
+	//implement later
+	return nil;
+}
+
++ (NSData *)ut8postToUrl:(id)url params:(NSDictionary *)params; {	
 	NSString *post = @"";
 	// Convert the params into a query string
 	if (params) {
@@ -63,27 +93,37 @@
 		}
 	}
 	
-	ILogPlus(@"url:%@ post: %@",urlString,post);
+	ILogPlus(@"url:%@ post: %@",url,post);
 	
 	NSData *postData = [post dataUsingEncoding:NSUTF8StringEncoding];
-	
+
 	NSString *postLength = String(@"%d", [postData length]);
-	
+
 	NSMutableURLRequest *request = [[[NSMutableURLRequest alloc] init] autorelease];
-	[request setURL:[NSURL URLWithString:urlString]];
+    if ([url isKindOfClass:[NSURL class]]) {
+        [request setURL:url];
+    }else {
+        [request setURL:[NSURL URLWithString:url]];
+    }	
 	[request setHTTPMethod:@"POST"];
 	[request setValue:postLength forHTTPHeaderField:@"Content-Length"];
 	[request setValue:@"application/x-www-form-urlencoded" forHTTPHeaderField:@"Content-Type"];
 	[request setHTTPBody:postData];
-	
+    [request setTimeoutInterval:30.0f];
+
 	NSError *error = nil;
-	
-	NSData *returnData2 = [NSURLConnection sendSynchronousRequest: request returningResponse: nil error: &error ];
+	NSData *returnData2 = [NSURLConnection sendSynchronousRequest: request returningResponse: nil error: &error];
+    
 	if (error) {
 		ILogPlus(@"Error: %@",error);
+        [self performSelectorOnMainThread:@selector(handleError:) withObject:error waitUntilDone:NO];
 	}
 	
 	return returnData2;
+}
+
++ (void)handleError:(NSError *)error; {
+    Alert(0, nil, [error localizedDescription], @"Ok", nil);
 }
 
 + (NSData *)postImage:(UIImage *)theImage toUrl:(NSString *)urlString params:(NSDictionary *)params; {	
@@ -109,7 +149,7 @@
     [body appendData:UIImageJPEGRepresentation(theImage,1.0)];  
     [body appendData:[[NSString stringWithFormat:@"\r\n--%@--\r\n",boundary] dataUsingEncoding:NSUTF8StringEncoding]]; 
 	
-	ILogPlus(@"url:%@ post: %@",urlString,body);
+	//ILogPlus(@"url:%@ post: %@",urlString,body);
 			
 	
 	[request setURL:[NSURL URLWithString:urlString]];
@@ -127,12 +167,12 @@
 }
 
 // Put a query string onto the end of a url
-+ (NSString*)postToUrl:(NSString *)urlString params:(NSDictionary *)params {
-	NSData *returnData2 = [self ut8postToUrl:urlString params:params];
++ (NSString*)postToUrl:(id)url params:(NSDictionary *)params {
+	NSData *returnData2 = [self ut8postToUrl:url params:params];
     
 	NSString *s = [[NSString alloc] initWithBytes:[returnData2 bytes] length:[returnData2 length] encoding:NSUTF8StringEncoding];	
 	
-	ILogPlus(@"%@, %@",s,returnData2);
+	//ILogPlus(@"%@, %@",s,returnData2);
 
 	return [s autorelease];
 }
