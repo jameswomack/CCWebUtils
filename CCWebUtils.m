@@ -51,6 +51,10 @@
 }
 
 
++ (NSString*)getFromUrl:(NSString *)url params:(NSDictionary *)params; {    
+	return [self getFromUrl:[self addQueryStringToUrl:url params:params]];
+}
+
 + (NSString*)getFromUrl:(id)url; {
     NSMutableURLRequest *request = [[[NSMutableURLRequest alloc] init] autorelease];
     if ([url isKindOfClass:[NSURL class]]) {
@@ -65,15 +69,13 @@
 	NSData *returnData2 = [NSURLConnection sendSynchronousRequest: request returningResponse: nil error: &error];
     
 	if (error) {
-		ILogPlus(@"Error: %@",error);
+		ALog(@"Error: %@",error);
         [self performSelectorOnMainThread:@selector(handleError:) withObject:error waitUntilDone:NO];
 	}
 	
-	NSString *s = [[NSString alloc] initWithBytes:[returnData2 bytes] length:[returnData2 length] encoding:NSUTF8StringEncoding];	
-	
-	ILogPlus(@"%@, %@",s,returnData2);
+	NSString *s = [[[NSString alloc] initWithBytes:[returnData2 bytes] length:[returnData2 length] encoding:NSUTF8StringEncoding] autorelease];	
     
-	return [s autorelease];
+	return [NSString stringWithString:s];
 }
 
 + (NSString*)stringWithContentsOfURL:(id)url method:(NSString *)HTTPMethod; {
@@ -81,7 +83,9 @@
 	return nil;
 }
 
-+ (NSData *)ut8postToUrl:(id)url params:(NSDictionary *)params; {	
++ (NSData *)ut8postToUrl:(id)url params:(NSDictionary *)params; {
+
+    
 	NSString *post = @"";
 	// Convert the params into a query string
 	if (params) {
@@ -93,7 +97,7 @@
 		}
 	}
 	
-	ILogPlus(@"url:%@ post: %@",url,post);
+	//ILogPlus(@"url:%@ post: %@",url,post);
 	
 	NSData *postData = [post dataUsingEncoding:NSUTF8StringEncoding];
 
@@ -114,65 +118,87 @@
 	NSError *error = nil;
 	NSData *returnData2 = [NSURLConnection sendSynchronousRequest: request returningResponse: nil error: &error];
     
-	if (error) {
-		ILogPlus(@"Error: %@",error);
+	if (error) 
+    {
+		ALog(@"Error: %@",error);
         [self performSelectorOnMainThread:@selector(handleError:) withObject:error waitUntilDone:NO];
 	}
-	
-	return returnData2;
+	NSParameterAssert(returnData2!=nil);
+    
+	return [NSData dataWithData:returnData2];
 }
 
 + (void)handleError:(NSError *)error; {
     Alert(0, nil, [error localizedDescription], @"Ok", nil);
 }
 
-+ (NSData *)postImage:(UIImage *)theImage toUrl:(NSString *)urlString params:(NSDictionary *)params; {	
++ (NSData *)postImage:(UIImage *)theImage toUrl:(id)url params:(NSDictionary *)params; {		
+	return [self postFile:UIImageJPEGRepresentation(theImage, 1.0) withName:@"image.jpg" key:@"image" toUrl:url params:params];
+}
+
++ (NSData *)postImage:(UIImage *)theImage toUrl:(id)url params:(NSDictionary *)params withName:(NSString *)theName key:(NSString *)theKey; {
+    return [self postFile:UIImageJPEGRepresentation(theImage, 1.0) withName:theName key:theKey toUrl:url params:params];
+}
+
++ (NSData *)postFile:(NSData *)theFile withName:(NSString *)theName key:(NSString *)theKey toUrl:(id)url params:(NSDictionary *)params; {	
     NSMutableURLRequest *request = [[[NSMutableURLRequest alloc] init] autorelease];
     
     NSString *boundary = [NSString stringWithString:@"---------------------------14737809831466499882746641449"];  
     NSString *contentType = [NSString stringWithFormat:@"multipart/form-data; boundary=%@",boundary];  
     [request addValue:contentType forHTTPHeaderField: @"Content-Type"];  
-
+    
     NSMutableData *body = [NSMutableData data]; 
     
 	// Convert the params into form data
 	if (params) {
 		for(id key in params) { 
-            [body appendData:[[NSString stringWithFormat:@"Content-Disposition: form-data; name=\"%@\"\r\n\r\n%@",key,[params objectForKey:key]] dataUsingEncoding:NSUTF8StringEncoding]];  
-            [body appendData:[[NSString stringWithFormat:@"\r\n--%@\r\n",boundary] dataUsingEncoding:NSUTF8StringEncoding]];
+            if (![key isEqualToString:theKey]) {
+                [body appendData:[[NSString stringWithFormat:@"Content-Disposition: form-data; name=\"%@\"\r\n\r\n%@",key,[params objectForKey:key]] dataUsingEncoding:NSUTF8StringEncoding]];  
+                [body appendData:[[NSString stringWithFormat:@"\r\n--%@\r\n",boundary] dataUsingEncoding:NSUTF8StringEncoding]];
+            }else {
+
+            }
 		}
 	}
     
+    [request setHTTPMethod:@"POST"];
     // Add the image to the form data
-    [body appendData:[@"Content-Disposition: form-data; name=\"image\"; filename=\"image.jpg\"\r\n" dataUsingEncoding:NSUTF8StringEncoding]];  
+    [body appendData:[String(@"Content-Disposition: form-data; name=\"%@\"; filename=\"%@\"\r\n",theKey,theName) dataUsingEncoding:NSUTF8StringEncoding]];  
     [body appendData:[[NSString stringWithString:@"Content-Type: application/octet-stream\r\n\r\n"] dataUsingEncoding:NSUTF8StringEncoding]];  
-    [body appendData:UIImageJPEGRepresentation(theImage,1.0)];  
+    [body appendData:theFile];  
     [body appendData:[[NSString stringWithFormat:@"\r\n--%@--\r\n",boundary] dataUsingEncoding:NSUTF8StringEncoding]]; 
 	
-	//ILogPlus(@"url:%@ post: %@",urlString,body);
-			
-	
-	[request setURL:[NSURL URLWithString:urlString]];
+	//ILogPlus(@"url:%@ post: %@",url,body);
+    
+	if ([url isKindOfClass:[NSURL class]]) {
+        [request setURL:url];
+    }else {
+        [request setURL:[NSURL URLWithString:url]];
+    }
+
 	//[request setValue:postLength forHTTPHeaderField:@"Content-Length"];
     [request setHTTPBody:body];
+
 	
 	NSError *error = nil;
 	
 	NSData *returnData2 = [NSURLConnection sendSynchronousRequest: request returningResponse: nil error: &error ];
 	if (error) {
-		ILogPlus(@"Error: %@",error);
+		ALog(@"Error: %@",error);
 	}
 	
-	return returnData2;
+	return [NSData dataWithData:returnData2];
 }
 
 // Put a query string onto the end of a url
 + (NSString*)postToUrl:(id)url params:(NSDictionary *)params {
+
+    
 	NSData *returnData2 = [self ut8postToUrl:url params:params];
     
 	NSString *s = [[NSString alloc] initWithBytes:[returnData2 bytes] length:[returnData2 length] encoding:NSUTF8StringEncoding];	
 	
-	//ILogPlus(@"%@, %@",s,returnData2);
+    NSParameterAssert(s);
 
 	return [s autorelease];
 }
